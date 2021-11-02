@@ -82,7 +82,6 @@ class StoryList {
     let data = response.data;
     delete data.updatedAt;
     const newStory = new Story(data)
-    console.log(newStory)
     return newStory
   }
 }
