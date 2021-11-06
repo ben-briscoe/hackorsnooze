@@ -12,39 +12,42 @@ async function getAndShowStoriesOnStart() {
   putStoriesOnPage();
 }
 
-/**
- * A render method to render HTML for an individual Story instance
- * - story: an instance of Story
- *
- * Returns the markup for the story.
- */
-
+//----------------BEGIN GENERATE MARKUP---------------------------
+//This function generates html to add to the DOM for the stories list. I have ammended the code given to us in order to incorporate the buttons needed to 'favorite' 'unfavorite' and 'remove' stories.
 function generateStoryMarkup(story) {
-  // console.debug("generateStoryMarkup", story);
 
-  //const hostName = story.getHostName();
+
+  //This conditional checks to see if there is a user logged in. If not, standard markup is generated.
   if(currentUser!=undefined){
-  let favs = currentUser.favorites
-  let isFav = false
-  for(let fav of favs){
-    if(story.storyId===fav.storyId){
-      isFav = true;
-      return $(`
-        <li id="${story.storyId}">
-        <a href="${story.url}" target="a_blank" class="story-link">
-          ${story.title}
-        </a>
-        <small class="story-hostname">(hostname.com)</small>
-        <small class="story-author">by ${story.author}</small>
-        <small class="story-user">posted by ${story.username}</small>
-        <br>
-        <p>this is one of your favorites</p>
-        <br>
-        <button class="unfav" id="unfav${story.storyId}">I dont like that</button>
-        <button class="remove" id="remove${story.storyId}">Remove</button>
-        </li>`);
+    //Initialize variables
+    let favs = currentUser.favorites //Pulls list of users favorite stories, we will iterate through this.
+    let isFav = false //Setting this to false initially. If we iterate through favs without deciding the story is a favorite, then we generate markup for not a favorite.
+
+    //This for loop will cycle through the favorites, seeing if any of their id's match the story that has been passed to this function. If they do, then we generate the necessary markup. we also redefine isFav to true so that the 'not favorite' markup is not generated.
+    for(let fav of favs){
+      if(story.storyId===fav.storyId){
+        
+        isFav = true;
+        
+        //Markup to return
+        return $(`
+          <li id="${story.storyId}">
+          <a href="${story.url}" target="a_blank" class="story-link">
+            ${story.title}
+          </a>
+          <small class="story-hostname">(hostname.com)</small>
+          <small class="story-author">by ${story.author}</small>
+          <small class="story-user">posted by ${story.username}</small>
+          <br>
+          <p>this is one of your favorites</p>
+          <br>
+          <button class="unfav" data-storyID="${story.storyId}">I dont like that</button>
+          <button class="remove" data-storyID="${story.storyId}">Remove</button>
+          </li>`);
+      }
     }
-  }
+
+    //If the above loop found a favorite, this won't run. If it didnt, this generates markup for a 'not favorite' story.
     if(isFav===false){
       return $(`
         <li id="${story.storyId}">
@@ -55,12 +58,13 @@ function generateStoryMarkup(story) {
         <small class="story-author">by ${story.author}</small>
         <small class="story-user">posted by ${story.username}</small>
         <br>
-        <button class="fav" id="fav${story.storyId}">This is my favorite!</button>
-        <button class="remove" id="remove${story.storyId}">Remove</button>
+        <button class="fav" data-storyID="${story.storyId}">This is my favorite!</button>
+        <button class="remove" data-storyID="${story.storyId}">Remove</button>
         </li>`)
     
   }
   }
+  //Generates standard markup if user is not logged in
   else {
     return $(`
     <li id="${story.storyId}">
@@ -106,30 +110,31 @@ async function addStoryToPage(e) {
   const authorString = $("#author").val();
   const urlString = $("#url").val();
   
-  /*Initializes newstory variable and defines it by calling the storylist method .addStory() on the previously 
-    defined variable 'storyList' an instance StoryList. This method adds the story to the api and returns an instance of
-    Story from the respons.*/
-  let newStory = await storyList.addStory(currentUser,{title:titleString,author:authorString,url:urlString});
+  /*calls the storylist method .addStory() on the previously defined variable 'storyList', an instance of StoryList. This method adds the story to the api. and also gives a response containing information needed to generate our own instance of that story.*/
+  const apiStory = await storyList.addStory(currentUser,{title:titleString,author:authorString,url:urlString});
+  
+  //If the request is succesful, generate story instance to add to our instance of storyList.
+  const newStory = new Story(apiStory);
 
   
-  /*To be honest I don't understand how this works. newStory should have been an instance of Story. Therefore I don't understand
-    why appending the OL in the DOM with this isn't throwing an error. I could change this and do it right, but I wanted to ask
-    about it first.*/
-  $allStoriesList.append(newStory);
+  storyList.stories.unshift(newStory)
 
-  //takes away the form and puts stories back up.
+    /*refresh DOM*/
   hidePageComponents();
-  getAndShowStoriesOnStart();
+  putStoriesOnPage();
+
+  /*--------------------------CHANGE THIS, DONT CALL getAndShowStoriesOnStart()!!!!!, use storyList.append*/
+
   //clears form
   $addStoryForm.trigger("reset");
 }
 
-
 //Event Listener for the submit button to add story.
 $addStoryForm.on("submit", async function (e){await addStoryToPage(e)});
 
-//Event Listener for the cancel button in case user changes their mind 
+//Event Listener for the cancel button in case user changes their mind, just left function in here because its simple
 $cancelButton.on('click',function(){
+  //rehide add story form and put stories back on page. also empty form in case they left som garbage in it.
   hidePageComponents();
   putStoriesOnPage();
   $addStoryForm.trigger("reset");
@@ -139,7 +144,7 @@ $cancelButton.on('click',function(){
 
 
 
-//--------------------BEGIN REMOVE STORY-------------------------------------
+//--------------------------------BEGIN REMOVE STORY------------------------------------------------------------
 /*This function actually does two things. It removes a story from the DOM. It also attempts to delete the story from the API. 
   Of course this is only allowed for stories that were created by the currentUser. The directions weren't real clear as to which
   of these they wanted, so I did both at once. Ideally to implement both these functions. You would offer a 'delete this story' 
@@ -147,8 +152,10 @@ $cancelButton.on('click',function(){
   Then have a seperate 'I don't want to see this buttton' that came up for every story that simply removed it from the DOM. I hope that
   this comment and the code below show that I do understand these procceses and am capable of doing whatever you like. */
 async function removeStory (e){
-  //pulls story id from event target, slice 6 because id should be `remove${id}`
-  const id = e.target.id.slice(6)
+  //pulls story id from event target dataset
+  const id = e.target.dataset.storyid
+
+  //Instead of adding storyId through id attribute on the html button, use jquery method .data (look up html data attribute)
 
   //removes LI from OL in the DOM
   $(`#${id}`).remove()
@@ -156,12 +163,23 @@ async function removeStory (e){
   //attempts to delete story in API (only succesful is story was created by currentUser)
   await User.removeStory(currentUser,id)
 
-  /*Take everything off page and add it back to keep everything tidy. When we just mess with dom,things dont come out tidy.
-    Note, in other instances to accomplish the same goal we call putStoriesOnPage(). This is not sufficient because putStoriesOnPage
-    uses the previously defined variable storyList. We instead call getAndShowStoriesOnStart because it redefines the variable storyList 
-    using the storyList method .getStories().*/
+  
+
+  //This finds the index of this specific story within the storyList.stories array. We will use this to splice it out of there.
+
+  let spliceIndex
+
+  for (let i=0;i<storyList.stories.length;i++){
+    if(storyList.stories[i].storyId===id){
+      spliceIndex = i;
+    }
+  }
+
+  storyList.stories.splice(spliceIndex,1)
+
+ /*refresh DOM*/
   hidePageComponents()
-  getAndShowStoriesOnStart()
+  putStoriesOnPage()
 }
 
 //Event Listener for the remove story buttons
@@ -174,15 +192,14 @@ $('#all-stories-list').on('click','.remove',async function (e){removeStory(e)})
 //----------------------BEGIN SELECT FAVORITE------------------------------------------
 //This function and event Listener  handle  adding favorites
 
-//Event Listener for Favorite Button
-$('#all-stories-list').on('click','.fav', async function(e){favorite(e)})
+
 
 
 //Function for adding favorite
 async function favorite (e){
  
-  //pulls story id from event target, slice 3 because id should be `fav${id}`
-  const id = e.target.id.slice(3)
+  //pulls story id from event target dataset
+  const id = e.target.dataset.storyid
 
   //runs add favorite method on currentUser. no information is needed from the response. running this simply adds favorite for this user to api
   await User.addFavorite(currentUser,id)
@@ -199,49 +216,14 @@ async function favorite (e){
   //Adds story referred to in event to the currentUser favorites list
   currentUser.favorites.push(thisStory)
   
-  
-  //This function call has been commented out because the function is not implemented. I didn't see it in the project requirements. I can do it if you like.
-  //const hostName = thisStory.getHostName();
-  
-
-  /*Index variable to note the placement of the story LI within the OL. 
-  We are going to remove this li and replace it with one slightly different
-  to reflect it is a favorite. We wamt to make sure we are able to put it back in the right place.
-  Note, index + 1 is used because jquery.index starts at 0 and we will use this in nth child selection
-  which starts at 1.*/
-  let index = $('li').index($(`#${id}`))+1;
-
-  //Remove LI for this story from the DOM
-  document.querySelector(`#all-stories-list li:nth-child(${index})`).remove()
-
-
-  //Create and define new LI to replace the one we just deleted.
-  let addition = document.createElement('li')
-  addition.id = id
-  addition.innerHTML = `<a href="${thisStory.url}" target="a_blank"
-                        class="story-link">${thisStory.title}</a>
-                        <small class="story-hostname">(hostname.com)</small>
-                        <small class="story-author">by ${thisStory.author}</small>
-                        <small class="story-user">posted by ${thisStory.username}</small>
-                        <br>
-                        <p>this is one of your favorites</p>
-                        <br>
-                        <button class="unfav" id="unfav${thisStory.storyId}">I dont like that</button>
-                        <button class="remove" id="remove${thisStory.storyId}">Remove</button>`
-
-  /*Add this new LI back to the DOM. When we removed the LI which was nth-child(index), the next LI took its place.
-    We will prepend that LI. The logic here is in case the LI was at the end. In that case we will append the LI at
-    nth-child(index-1). */
-  if(document.querySelector(`#all-stories-list li:nth-child(${index})`)){
-    document.querySelector(`#all-stories-list li:nth-child(${index})`).prepend(addition)}
-  else if(!document.querySelector(`#all-stories-list li:nth-child(${index})`)){
-    document.querySelector(`#all-stories-list li:nth-child(${index-1})`).append
-  }
 
   //Take everything off page and add it back to keep everything tidy. When we just mess with dom,things dont come out tidy.
   hidePageComponents()
   putStoriesOnPage()
 }
+
+//Event Listener for Favorite Button
+$('#all-stories-list').on('click','.fav', async function(e){favorite(e)})
 //----------------------------END SELECT FAVORITE---------------------------------------------
  
 
@@ -250,16 +232,11 @@ async function favorite (e){
 //This section handles removing a story as a favorite
 
 
-
-//Event Listener for the remove favorite button
-$('#all-stories-list').on('click','.unfav', async function(e){removeFavorite(e)})
-
-
 //Function to remove story as favorite for currentUser
 async function removeFavorite(e) {
   
-  //pulls story id from event target, slice 5 because id should be `unfav${id}`
-  const id = e.target.id.slice(5)
+  //pulls story id from event target dataset
+  const id = e.target.dataset.storyid
 
   //runs removeFavorite method on currentUser. no information is needed from the response. running this simply removes favorite for this user to api
   await User.removeFavorite(currentUser,id)
@@ -273,52 +250,20 @@ async function removeFavorite(e) {
       thisStory=story;
     }
   }
-  
-
-  /*listIndex variable to note the placement of the story LI within the OL. 
-  We are going to remove this li and replace it with one slightly different
-  to reflect it is a favorite. We wamt to make sure we are able to put it back in the right place.
-  Note, index + 1 is used because jquery.index starts at 0 and we will use this in nth child selection
-  which starts at 1.*/
-  const listIndex = $('li').index($(`#${id}`))+1;
 
 
   //find index of story within favorites, then remove it
   const storyIndex = currentUser.favorites.indexOf(thisStory)
   currentUser.favorites.splice(storyIndex,1)
   
-  //This function call has been commented out because the function is not implemented. I didn't see it in the project requirements. I can do it if you like.
-  //const hostName = thisStory.getHostName();
-  
-  //Remove LI from DOM
-  document.querySelector(`#all-stories-list li:nth-child(${listIndex})`).remove()
 
-  //Create and define new LI to replace the one we just deleted.
-  let addition = document.createElement('li')
-  addition.id = id
-  addition.innerHTML = `
-                        <li id="${thisStory.storyId}">
-                        <a href="${thisStory.url}" target="a_blank" class="story-link">${thisStory.title}</a>
-                        <small class="story-hostname">(hostname.com)</small>
-                        <small class="story-author">by ${thisStory.author}</small>
-                        <small class="story-user">posted by ${thisStory.username}</small>
-                        <br>
-                        <button class="fav" id="fav${thisStory.storyId}">This is my favorite!</button>
-                        <button class="remove" id="remove${thisStory.storyId}">Remove</button>
-                        </li>`
 
-  /*Add this new LI back to the DOM. When we removed the LI which was nth-child(index), the next LI took its place.
-  We will prepend that LI. The logic here is in case the LI was at the end. In that case we will append the LI at
-  nth-child(index-1). */
-  if(document.querySelector(`#all-stories-list li:nth-child(${listIndex})`)){
-    document.querySelector(`#all-stories-list li:nth-child(${listIndex})`).prepend(addition)}
-  else if(!document.querySelector(`#all-stories-list li:nth-child(${listIndex})`)){
-    document.querySelector(`#all-stories-list li:nth-child(${listIndex-1})`).append
-  }
-
-  //Take everything off page and add it back to keep everything tidy. When we just mess with dom,things dont come out tidy.
+ /*refresh DOM*/
   hidePageComponents()
   putStoriesOnPage()
 }
 
+
+//Event Listener for the remove favorite button
+$('#all-stories-list').on('click','.unfav', async function(e){removeFavorite(e)})
 //----------------------END REMOVE FAVORITE---------------------------------------------

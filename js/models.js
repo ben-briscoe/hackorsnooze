@@ -77,12 +77,15 @@ class StoryList {
    */
 
   async addStory(currentUser,{title,author,url}) {
-    const userToken = currentUser.loginToken
-    const response = await axios.post(BASE_URL+'/stories', {token:userToken,story:{title,author,url}})
-    let data = response.data;
-    delete data.updatedAt;
-    const newStory = new Story(data)
-    return newStory
+    try{
+      const response = await axios.post(BASE_URL+'/stories', {token:currentUser.loginToken,story:{title,author,url}})
+      const newStory = response.data.story
+      delete newStory.updatedAt
+      return response.data.story
+    }
+    catch(error) {
+      alert("Oh no!!!!! Something went wrong. Try again later. Make sure you have entered an author, a title, and a valid complete URL.")
+    }
   }
 }
 
@@ -206,7 +209,6 @@ class User {
   }
 
   static async addFavorite(currentUser,id) {
-  
   await axios.post(`https://hack-or-snooze-v3.herokuapp.com/users/${currentUser.username}/favorites/${id}`,{token:currentUser.loginToken})
   }
 
