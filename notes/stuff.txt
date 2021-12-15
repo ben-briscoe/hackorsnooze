@@ -1,0 +1,106 @@
+site for c++ compiler instructions:
+https://code.visualstudio.com/docs/languages/cpp
+
+
+VSC Extensions:
+
+Remote- WSL
+Remote- SSH: Editing Configuration Files
+Remote- SSH
+Remote- Containers
+C/C++ Themes
+Better C++ Syntax
+Python
+Pylance
+Live Server
+Jupyter Notebook Renderers
+Jupyter Keymap
+Jupyter
+Graphviz Preview
+Doxygen Document Generator
+Copy without formatting
+CMake Tools
+CMake
+C/C++
+C/C++ Extension Pack
+Bracket Pair Colorizer
+Bracket Pair Colorizer 2
+Material Theme
+Material Theme Icons
+Prettier Now
+GitLens --Git supercharged
+
+settings.JSON
+
+{
+    "workbench.colorTheme": "Material Theme Palenight",
+    "security.workspace.trust.untrustedFiles": "open",
+    "bracketPairColorizer.consecutivePairColors": [
+
+        "()",
+        "[]",
+        "{}",
+        [
+            "Gold",
+            "Orchid",
+            "LightSkyBlue"
+        ],
+        "Red"
+    ],
+
+  "bracket-pair-colorizer-2.colors": [
+    "Gold",
+    "Orchid",
+    "LightSkyBlue",
+          "Salmon",
+          "LawnGreen",
+          "DarkOrange",
+          "Cornsilk"
+  ],
+  "bracket-pair-colorizer-2.highlightActiveScope": true,
+  "bracket-pair-colorizer-2.activeScopeCSS": [
+    "borderStyle : solid",
+    "borderWidth : 1px",
+    "borderColor : {color}",
+    "opacity: 0.5"
+  ],
+  "bracket-pair-colorizer-2.showBracketsInGutter": true,
+  "bracket-pair-colorizer-2.showBracketsInRuler": true,
+  "bracket-pair-colorizer-2.scopeLineRelativePosition":true,
+  "bracket-pair-colorizer-2.scopeLineCSS": [
+    "borderStyle : solid",
+    "borderWidth : 1px",
+    "borderColor : {color}",
+    "opacity: 0.5"
+    ],
+    "files.autoSave": "afterDelay",
+    "grunt.autoDetect": "on",
+    "gulp.autoDetect": "on",
+    "jake.autoDetect": "on",
+    "launch": {
+      "configurations": [
+        {
+          "name": "g++ build and debug active file",
+          "type": "cppdbg",
+          "request": "launch",
+          "program": "${fileDirname}/${fileBasenameNoExtension}",
+          "args": [],
+          "stopAtEntry": false,
+          "cwd": "${workspaceFolder}",
+          "environment": [],
+          "externalConsole": false,
+          "MIMode": "gdb",
+          "setupCommands": [
+            {
+              "description": "Enable pretty-printing for gdb",
+              "text": "-enable-pretty-printing",
+              "ignoreFailures": true
+            }
+          ],
+          "preLaunchTask": "g++ build active file",
+          "miDebuggerPath": "/usr/bin/gdb"
+        }
+      ]
+    }
+}
+
